@@ -4,7 +4,7 @@ from brand.models import Brand
 
 class Product(models.Model):
     brand_id = models.OneToOneField(Brand, on_delete=models.CASCADE)
-    category_id = models.OneToOneField(category, on_delete=models.CASCADE, null=False)
+    category_id = models.ManyToManyField(category)
     name = models.CharField(max_length=100, null=False)  # модель часов
     price = models.FloatField(null=False)
     description = models.TextField(null=True)

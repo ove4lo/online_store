@@ -32,10 +32,18 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.auth',
+    'django.contrib.admin',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'brand.apps.BrandConfig',
+    'cart.apps.CartConfig',
+    'category.apps.CategoryConfig',
+    'order.apps.OrderConfig',
+    'product.apps.ProductConfig',
+    'User.apps.UserConfig',
+    'wishlist.apps.WishlistConfig',
 ]
 
 MIDDLEWARE = [
