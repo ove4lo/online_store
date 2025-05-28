@@ -1,5 +1,8 @@
 from django.urls import path
 from django.contrib import admin
+from product.views import *
+
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('/api/products/', get_all_products)
 ]
