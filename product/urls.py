@@ -4,5 +4,5 @@ from product.views import *
 
 
 urlpatterns = [
-    path('/api/products/', get_all_products)
+    path('products/', get_all_products)
 ]
