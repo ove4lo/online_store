@@ -11,8 +11,29 @@ from django.views.decorators.csrf import csrf_exempt
 
 # Получение всех продуктов
 def get_all_products(request):
-    products = Product.objects.filter(is_deleted=False) #товар не удален из каталога
-    data = serializers.serialize('json', products)
+    products = Product.objects.filter(is_deleted=True) # товар удален из каталога или нет
+    data = []
+
+    for product in products:
+        data.append({
+            "id": product.id,
+            "brand_id": product.brand_id.id if product.brand_id else None,
+            "category_ids": list(product.category_id.values_list('id', flat=True)),
+            "name": product.name,
+            "price": float(product.price),
+            "description": product.description,
+            "country": product.country,
+            "movement_type": product.movement_type,
+            "caliber": product.caliber,
+            "case_material": product.case_material,
+            "dial_type": product.dial_type,
+            "bracelet_material": product.bracelet_material,
+            "water_resistance": product.water_resistance,
+            "glass_type": product.glass_type,
+            "dimensions": product.dimensions,
+            "is_deleted": product.is_deleted
+        })
+
     return JsonResponse(data, safe=False)
 
 # Добавление нового товара
