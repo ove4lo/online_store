@@ -19,8 +19,19 @@ class Product(models.Model):
     dimensions = models.CharField(max_length=50, null=True)
     is_deleted = models.BooleanField(default=False)
 
+    class Meta:
+        ordering = ['name']
+        db_table = 'product'
+        indexes = [
+            models.Index(fields=['brand_id']),
+        ]
+
 
 class ProductImage(models.Model):
     product_id = models.OneToOneField(Product, on_delete=models.SET_NULL, null=True)
     image_path = models.CharField(max_length=255, null=False)
     is_main = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['product_id']
+        db_table = 'product_image'

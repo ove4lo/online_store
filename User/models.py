@@ -19,3 +19,10 @@ class User(models.Model):
     @password.setter
     def password(self, raw_password):
         self.password_hash = make_password(raw_password)
+
+    class Meta:
+        ordering = ['username']
+        db_table = 'user'
+        indexes = [
+            models.Index(fields=['username']),
+        ]
