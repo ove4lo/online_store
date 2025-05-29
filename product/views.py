@@ -2,9 +2,84 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.core import serializers
 from product.models import Product
+import json
+from django.http import JsonResponse
+from .models import Product, ProductImage
+from brand.models import Brand
+from category.models import category
+from django.views.decorators.csrf import csrf_exempt
 
-
+#Получение всех продуктов
 def get_all_products(request):
-    products = Product.objects.all()
+    products = Product.objects.filter(is_deleted=False) #товар не удален из каталога
     data = serializers.serialize('json', products)
     return JsonResponse(data, safe=False)
+
+@csrf_exempt
+def create_product(request): #добавление нового товара
+    if request.method == "POST":
+        try:
+            body = json.loads(request.body)
+
+            brand_id = body.get("brand_id")
+            category_ids = body.get("category_ids", [])
+            name = body.get("name")
+            price = body.get("price")
+            description = body.get("description")
+            country = body.get("country")
+            movement_type = body.get("movement_type")
+            caliber = body.get("caliber")
+            case_material = body.get("case_material")
+            dial_type = body.get("dial_type")
+            bracelet_material = body.get("bracelet_material")
+            water_resistance = body.get("water_resistance")
+            glass_type = body.get("glass_type")
+            dimensions = body.get("dimensions")
+            is_deleted = body.get("is_deleted", False)
+
+            if not all([brand_id, name, price]):
+                return JsonResponse({"Ошибка": "Не заполнены обязательные поля"}, status=400)
+
+            brand = Brand.objects.get(id=brand_id)
+            product = Product.objects.create(
+                brand_id=brand,
+                name=name,
+                price=price,
+                description=description,
+                country=country,
+                movement_type=movement_type,
+                caliber=caliber,
+                case_material=case_material,
+                dial_type=dial_type,
+                bracelet_material=bracelet_material,
+                water_resistance=water_resistance,
+                glass_type=glass_type,
+                dimensions=dimensions,
+                is_deleted=is_deleted
+            )
+
+            for cat_id in category_ids:
+                cat = category.objects.get(id=cat_id)
+                product.category_id.add(cat)
+
+            return JsonResponse({"message": "Продукт успешно создан", "product_id": product.id}, status=201)
+
+        except Exception as e:
+            return JsonResponse({"Ошибка": str(e)}, status=500)
+
+    return JsonResponse({"Ошибка": "Только метод POST"}, status=405)
+
+
+@csrf_exempt
+def delete_product(request, product_id): #мягкое удаление товара, остается в бд, в каталоге нет
+    if request.method == "POST":
+        try:
+            product = Product.objects.get(id=product_id)
+            product.is_deleted = True
+            product.save()
+            return JsonResponse({"message": "Данный продукт удален из каталога"}, status=200)
+        except Product.DoesNotExist:
+            return JsonResponse({"Ошибка": "Продукт с таким id не найден"}, status=404)
+        except Exception as e:
+            return JsonResponse({"Ошибка": str(e)}, status=500)
+    return JsonResponse({"Ошибка": "Только метод POST"}, status=405)
