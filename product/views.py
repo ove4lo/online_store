@@ -9,14 +9,15 @@ from brand.models import Brand
 from category.models import category
 from django.views.decorators.csrf import csrf_exempt
 
-#Получение всех продуктов
+# Получение всех продуктов
 def get_all_products(request):
     products = Product.objects.filter(is_deleted=False) #товар не удален из каталога
     data = serializers.serialize('json', products)
     return JsonResponse(data, safe=False)
 
+# Добавление нового товара
 @csrf_exempt
-def create_product(request): #добавление нового товара
+def create_product(request):
     if request.method == "POST":
         try:
             body = json.loads(request.body)
@@ -38,7 +39,7 @@ def create_product(request): #добавление нового товара
             is_deleted = body.get("is_deleted", False)
 
             if not all([brand_id, name, price]):
-                return JsonResponse({"Ошибка": "Не заполнены обязательные поля"}, status=400)
+                return JsonResponse({"error": "Не заполнены обязательные поля"}, status=400)
 
             brand = Brand.objects.get(id=brand_id)
             product = Product.objects.create(
@@ -65,13 +66,13 @@ def create_product(request): #добавление нового товара
             return JsonResponse({"message": "Продукт успешно создан", "product_id": product.id}, status=201)
 
         except Exception as e:
-            return JsonResponse({"Ошибка": str(e)}, status=500)
+            return JsonResponse({"error": str(e)}, status=500)
 
-    return JsonResponse({"Ошибка": "Только метод POST"}, status=405)
+    return JsonResponse({"error": "Только метод POST"}, status=405)
 
-
+#Мягкое удаление товара, остается в бд, в каталоге нет
 @csrf_exempt
-def delete_product(request, product_id): #мягкое удаление товара, остается в бд, в каталоге нет
+def delete_product(request, product_id):
     if request.method == "POST":
         try:
             product = Product.objects.get(id=product_id)
@@ -79,7 +80,8 @@ def delete_product(request, product_id): #мягкое удаление това
             product.save()
             return JsonResponse({"message": "Данный продукт удален из каталога"}, status=200)
         except Product.DoesNotExist:
-            return JsonResponse({"Ошибка": "Продукт с таким id не найден"}, status=404)
+            return JsonResponse({"error": "Продукт с таким id не найден"}, status=404)
         except Exception as e:
-            return JsonResponse({"Ошибка": str(e)}, status=500)
-    return JsonResponse({"Ошибка": "Только метод POST"}, status=405)
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Только метод POST"}, status=405)
+
