@@ -13,6 +13,12 @@ from django.http import HttpResponse
 
 def get_all_brands(request):
     brands = Brand.objects.all()
-    data = serializers.serialize('json', brands)
-    print('ewqewq')
+    data = []
+
+    for brand in brands:
+        data.append({
+            "id": brand.id,
+            "name": brand.name,
+            "description": brand.description
+        })
     return JsonResponse(data, safe=False)
