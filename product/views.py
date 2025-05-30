@@ -1,7 +1,3 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.core import serializers
-from product.models import Product
 import json
 from django.http import JsonResponse
 from .models import Product, ProductImage
