@@ -118,7 +118,7 @@ def get_order_by_id(request, order_id):
 
     return JsonResponse({"error": "Только метод GET"}, status=405)
 
-# Получение всех заказов
+# Получение всех заказов с сортировкой, фильтрацией, поиском
 @csrf_exempt
 def get_all_orders(request):
     if request.method == "GET":
@@ -182,3 +182,29 @@ def get_all_orders(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод GET"}, status=405)
+
+# Изменение у заказа его статус
+@csrf_exempt
+def update_order_status(request, order_id):
+    if request.method == "PATCH":
+        try:
+            body = json.loads(request.body)
+            new_status = body.get("status")
+
+            allowed_statuses = ["В обработке", "Отправлен", "Доставлен", "Отменен"]
+            if new_status not in allowed_statuses:
+                return JsonResponse({"error": "Недопустимый статус"}, status=400)
+
+            order = Order.objects.filter(id=order_id).first()
+            if not order:
+                return JsonResponse({"error": "Заказ не найден"}, status=404)
+
+            order.status = new_status
+            order.save()
+
+            return JsonResponse({"message": "Статус обновлен", "order_id": order.id, "new_status": order.status})
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Только метод PATCH"}, status=405)
