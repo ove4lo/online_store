@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from .models import Order, OrderItem, Product
 from User.models import User
 from django.utils.timezone import localtime
+from django.utils.timezone import now, timedelta
+from django.db.models import Q
 
 # Добавление нового заказа
 @csrf_exempt
@@ -121,22 +123,60 @@ def get_order_by_id(request, order_id):
 def get_all_orders(request):
     if request.method == "GET":
         try:
-            orders = Order.objects.select_related('user').order_by('-created_at')
+            status_filter = request.GET.get("status")
+            period_filter = request.GET.get("period")
+            search = request.GET.get("search", "").strip().lower()
 
-            data = []
+            sort_by = request.GET.get("sort_by", "date")  # date, status, price, user
+            order = request.GET.get("order", "desc")
+
+            orders = Order.objects.select_related("user").all()
+
+            if status_filter:
+                orders = orders.filter(status__iexact=status_filter)
+
+            if period_filter:
+                today = now().date()
+                if period_filter == "today":
+                    orders = orders.filter(created_at__date=today)
+                elif period_filter == "week":
+                    week_ago = today - timedelta(days=7)
+                    orders = orders.filter(created_at__date__gte=week_ago)
+                elif period_filter == "month":
+                    month_ago = today - timedelta(days=30)
+                    orders = orders.filter(created_at__date__gte=month_ago)
+
+            if search:
+                if search.isdigit():
+                    orders = orders.filter(id=int(search))
+                else:
+                    orders = orders.filter(user__email__icontains=search)
+
+            sort_fields = {
+                "date": "created_at",
+                "status": "status",
+                "price": "total_price",
+                "user": "user__email"
+            }
+
+            sort_field = sort_fields.get(sort_by, "created_at")
+            if order == "desc":
+                sort_field = "-" + sort_field
+
+            orders = orders.order_by(sort_field)
+
+            result = []
             for order in orders:
-                user = order.user
-                customer_name = user.full_name if user.full_name else user.email
-
-                data.append({
+                user = order.user.full_name or order.user.email
+                result.append({
                     "order_id": order.id,
-                    "created_at": localtime(order.created_at).strftime("%Y-%m-%d %H:%M:%S"),
-                    "customer": customer_name,
+                    "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "user": user,
                     "total_price": float(order.total_price),
                     "status": order.status
                 })
 
-            return JsonResponse(data, safe=False)
+            return JsonResponse(result, safe=False)
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
