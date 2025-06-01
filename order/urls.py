@@ -7,5 +7,5 @@ urlpatterns = [
     path('orders/create/', create_order),
     path('orders/<int:order_id>/', get_order_by_id),
     path('orders/', get_all_orders),
-    path('orders/<int:order_id>/status/', update_order_status)
+    path('orders/status/<int:order_id>/', update_order_status)
 ]

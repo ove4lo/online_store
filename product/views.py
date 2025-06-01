@@ -149,8 +149,7 @@ def create_product(request):
 
     return JsonResponse({"error": "Только метод POST"}, status=405)
 
-
-#Мягкое удаление товара, остается в бд, в каталоге нет
+# Мягкое удаление товара, остается в бд, в каталоге нет
 @csrf_exempt
 def soft_delete_product(request, product_id):
     if request.method == "DELETE":
@@ -165,7 +164,7 @@ def soft_delete_product(request, product_id):
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Только метод DELETE"}, status=405)
 
-#Жесткое удаление товара, удаляется из бд
+# Жесткое удаление товара, удаляется из бд
 @csrf_exempt
 def hard_delete_product(request, product_id):
     if request.method == "DELETE":
@@ -179,3 +178,80 @@ def hard_delete_product(request, product_id):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод DELETE"}, status=405)
+
+# Редактирование товара
+@csrf_exempt
+def edit_product(request, product_id):
+    if request.method == "PATCH":
+        try:
+            product = Product.objects.get(id=product_id)
+
+            # Проверка типа данных
+            if request.content_type == "application/json":
+                body = json.loads(request.body)
+            else:
+                body = request.POST
+
+            # Обновление полей
+            if "brand_id" in body:
+                brand = Brand.objects.get(id=body.get("brand_id"))
+                product.brand_id = brand
+
+            if "name" in body:
+                product.name = body.get("name")
+            if "price" in body:
+                product.price = body.get("price")
+            if "description" in body:
+                product.description = body.get("description")
+            if "country" in body:
+                product.country = body.get("country")
+            if "movement_type" in body:
+                product.movement_type = body.get("movement_type")
+            if "caliber" in body:
+                product.caliber = body.get("caliber")
+            if "case_material" in body:
+                product.case_material = body.get("case_material")
+            if "dial_type" in body:
+                product.dial_type = body.get("dial_type")
+            if "bracelet_material" in body:
+                product.bracelet_material = body.get("bracelet_material")
+            if "water_resistance" in body:
+                product.water_resistance = body.get("water_resistance")
+            if "glass_type" in body:
+                product.glass_type = body.get("glass_type")
+            if "dimensions" in body:
+                product.dimensions = body.get("dimensions")
+            if "is_deleted" in body:
+                product.is_deleted = str(body.get("is_deleted")).lower() == "true"
+
+            # Обновление категорий
+            category_ids = body.get("category_ids")
+            if category_ids:
+                if isinstance(category_ids, str):
+                    category_ids = json.loads(category_ids)
+                product.category_id.clear()
+                for cat_id in category_ids:
+                    cat = category.objects.get(id=cat_id)
+                    product.category_id.add(cat)
+
+            product.save()
+
+            # Обновление изображений
+            if request.FILES:
+                product.images.all().delete()
+                images = request.FILES.getlist("images")
+                for idx, image_file in enumerate(images):
+                    ProductImage.objects.create(
+                        product=product,
+                        image=image_file,
+                        is_main=(idx == 0)
+                    )
+
+            return JsonResponse({"message": "Продукт обновлён успешно"}, status=200)
+
+        except Product.DoesNotExist:
+            return JsonResponse({"error": "Продукт не найден"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Только метод PATCH"}, status=405)
