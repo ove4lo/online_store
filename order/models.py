@@ -2,9 +2,13 @@ from django.db import models
 from product.models import Product
 from User.models import User
 
+
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, default='pending')
+    address = models.CharField(max_length=255)
+    postal_code = models.CharField(max_length=20)
+
+    status = models.CharField(max_length=20, default='В обработке')
     total_price = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -15,29 +19,16 @@ class Order(models.Model):
             models.Index(fields=['user']),
         ]
 
+
 class OrderItem(models.Model):
     order_id = models.ForeignKey(Order, on_delete=models.CASCADE)
     product_id = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.FloatField(null=False)
-    price_at_purchase = models.FloatField(null=False)
+    quantity = models.IntegerField()
+    price_at_purchase = models.FloatField()
 
     class Meta:
         ordering = ['order_id']
         db_table = 'order_item'
         indexes = [
             models.Index(fields=['order_id']),
-        ]
-
-class UserAddress(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    address = models.CharField(max_length=255, null=False)
-    city = models.CharField(max_length=50, null=False)
-    postal_code = models.CharField(max_length=20, null=False)
-    is_default = models.BooleanField(default=False)
-
-    class Meta:
-        ordering = ['user']
-        db_table = 'user_address'
-        indexes = [
-            models.Index(fields=['user']),
         ]

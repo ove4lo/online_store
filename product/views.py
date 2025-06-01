@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 # Получение всех продуктов
 def get_all_products(request):
-    products = Product.objects.filter(is_deleted=True) # товар удален из каталога или нет
+    products = Product.objects.filter(is_deleted=False) # товар удален из каталога или нет
     data = []
 
     for product in products:
@@ -90,7 +90,7 @@ def create_product(request):
 #Мягкое удаление товара, остается в бд, в каталоге нет
 @csrf_exempt
 def delete_product(request, product_id):
-    if request.method == "POST":
+    if request.method == "DELETE":
         try:
             product = Product.objects.get(id=product_id)
             product.is_deleted = True
@@ -100,5 +100,5 @@ def delete_product(request, product_id):
             return JsonResponse({"error": "Продукт с таким id не найден"}, status=404)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
-    return JsonResponse({"error": "Только метод POST"}, status=405)
+    return JsonResponse({"error": "Только метод DELETE"}, status=405)
 
