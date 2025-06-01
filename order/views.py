@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from .models import Order, OrderItem, Product
 from User.models import User
+from django.utils.timezone import localtime
 
 # Добавление нового заказа
 @csrf_exempt
@@ -102,7 +103,7 @@ def get_order_by_id(request, order_id):
                 "user": user_data,
                 "items": items_data,
                 "total_price": float(order.total_price),
-                "created_at": order.created_at,
+                "created_at": localtime(order.created_at).strftime("%Y-%m-%d %H:%M:%S"),
                 "status": order.status
             }
 
@@ -110,6 +111,33 @@ def get_order_by_id(request, order_id):
 
         except Order.DoesNotExist:
             return JsonResponse({"error": "Заказ не найден"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Только метод GET"}, status=405)
+
+# Получение всех заказов
+@csrf_exempt
+def get_all_orders(request):
+    if request.method == "GET":
+        try:
+            orders = Order.objects.select_related('user').order_by('-created_at')
+
+            data = []
+            for order in orders:
+                user = order.user
+                customer_name = user.full_name if user.full_name else user.email
+
+                data.append({
+                    "order_id": order.id,
+                    "created_at": localtime(order.created_at).strftime("%Y-%m-%d %H:%M:%S"),
+                    "customer": customer_name,
+                    "total_price": float(order.total_price),
+                    "status": order.status
+                })
+
+            return JsonResponse(data, safe=False)
+
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
