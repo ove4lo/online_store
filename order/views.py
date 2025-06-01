@@ -71,3 +71,46 @@ def create_order(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод POST"}, status=405)
+
+# Просмотр деталей заказа по его id
+@csrf_exempt
+def get_order_by_id(request, order_id):
+    if request.method == "GET":
+        try:
+            order = Order.objects.select_related('user').prefetch_related('orderitem_set__product_id').get(id=order_id)
+
+            # Данные пользователя
+            user = order.user
+            user_data = {
+                "full_name": user.full_name,
+                "phone": user.phone,
+                "email": user.email,
+                "address": order.address
+            }
+
+            # Товары в заказе
+            items_data = []
+            for item in order.orderitem_set.all():
+                product = item.product_id
+                items_data.append({
+                    "name": product.name,
+                    "quantity": item.quantity,
+                    "price": float(item.price_at_purchase)
+                })
+
+            data = {
+                "user": user_data,
+                "items": items_data,
+                "total_price": float(order.total_price),
+                "created_at": order.created_at,
+                "status": order.status
+            }
+
+            return JsonResponse(data, safe=False)
+
+        except Order.DoesNotExist:
+            return JsonResponse({"error": "Заказ не найден"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Только метод GET"}, status=405)
