@@ -208,3 +208,28 @@ def update_order_status(request, order_id):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод PATCH"}, status=405)
+
+# Получение всех заказов пользователя
+@csrf_exempt
+def get_user_orders(request, user_id):
+    if request.method == "GET":
+        try:
+            orders = Order.objects.select_related("user").filter(user_id=user_id)
+
+            result = []
+            for order in orders:
+                user = order.user.full_name or order.user.email
+                result.append({
+                    "order_id": order.id,
+                    "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "user": user,
+                    "total_price": float(order.total_price),
+                    "status": order.status
+                })
+
+            return JsonResponse(result, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Только метод GET"}, status=405)
