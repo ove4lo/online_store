@@ -4,43 +4,68 @@ from .models import Product, ProductImage
 from brand.models import Brand
 from category.models import category
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
 
-# Получение всех товаров
-def get_all_products(request):
-    products = Product.objects.filter(is_deleted=False)
-    data = []
+# Получение товаров по поиску, можно не передавать ничего, выведет все товары
+@csrf_exempt
+def get_products(request):
+    if request.method == "GET":
+        try:
+            search = request.GET.get("search", "").strip()
+            products = Product.objects.select_related("brand_id").prefetch_related("images", "category_id")
 
-    for product in products:
-        images = product.images.all()
-        image_data = [
-            {
-                "url": request.build_absolute_uri(image.image.url),
-                "is_main": image.is_main
-            }
-            for image in images if image.image
-        ]
+            if search:
+                products = products.filter(
+                    Q(name__icontains=search) |
+                    Q(brand_id__name__icontains=search) |
+                    Q(country__icontains=search) |
+                    Q(movement_type__icontains=search) |
+                    Q(caliber__icontains=search) |
+                    Q(case_material__icontains=search) |
+                    Q(dial_type__icontains=search) |
+                    Q(bracelet_material__icontains=search) |
+                    Q(water_resistance__icontains=search) |
+                    Q(glass_type__icontains=search) |
+                    Q(dimensions__icontains=search)
+                )
 
-        data.append({
-            "id": product.id,
-            "brand_id": product.brand_id.id if product.brand_id else None,
-            "category_ids": list(product.category_id.values_list('id', flat=True)),
-            "name": product.name,
-            "price": float(product.price),
-            "description": product.description,
-            "country": product.country,
-            "movement_type": product.movement_type,
-            "caliber": product.caliber,
-            "case_material": product.case_material,
-            "dial_type": product.dial_type,
-            "bracelet_material": product.bracelet_material,
-            "water_resistance": product.water_resistance,
-            "glass_type": product.glass_type,
-            "dimensions": product.dimensions,
-            "is_deleted": product.is_deleted,
-            "images": image_data
-        })
+            data = []
+            for product in products:
+                images = product.images.all()
+                image_data = [
+                    {
+                        "url": request.build_absolute_uri(image.image.url),
+                        "is_main": image.is_main
+                    }
+                    for image in images if image.image
+                ]
 
-    return JsonResponse(data, safe=False)
+                data.append({
+                    "id": product.id,
+                    "brand_id": product.brand_id.id if product.brand_id else None,
+                    "category_ids": list(product.category_id.values_list('id', flat=True)),
+                    "name": product.name,
+                    "price": float(product.price),
+                    "description": product.description,
+                    "country": product.country,
+                    "movement_type": product.movement_type,
+                    "caliber": product.caliber,
+                    "case_material": product.case_material,
+                    "dial_type": product.dial_type,
+                    "bracelet_material": product.bracelet_material,
+                    "water_resistance": product.water_resistance,
+                    "glass_type": product.glass_type,
+                    "dimensions": product.dimensions,
+                    "is_deleted": product.is_deleted,
+                    "images": image_data
+                })
+
+            return JsonResponse(data, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Только метод GET"}, status=405)
 
 # Получение одного товара по его id
 @csrf_exempt

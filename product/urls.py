@@ -4,7 +4,7 @@ from product.views import *
 
 
 urlpatterns = [
-    path('products/', get_all_products),
+    path('products/', get_products),
     path('products/<int:product_id>/', get_product_by_id),
     path('products/create/', create_product),
     path('products/soft-delete/<int:product_id>/', soft_delete_product),
