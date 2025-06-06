@@ -4,5 +4,9 @@ from order.views import *
 
 
 urlpatterns = [
-    path('order/create/', create_order)
+    path('orders/create/', create_order),
+    path('orders/<int:order_id>/', get_order_by_id),
+    path('orders/', get_all_orders),
+    path('orders/status/<int:order_id>/', update_order_status),
+    path('orders/user/<int:user_id>/', get_user_orders)
 ]

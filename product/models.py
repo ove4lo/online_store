@@ -3,7 +3,7 @@ from category.models import category
 from brand.models import Brand
 
 class Product(models.Model):
-    brand_id = models.OneToOneField(Brand, on_delete=models.CASCADE)
+    brand_id = models.ForeignKey(Brand, on_delete=models.CASCADE)
     category_id = models.ManyToManyField(category)
     name = models.CharField(max_length=100, null=False)  # модель часов
     price = models.FloatField(null=False)
@@ -28,10 +28,10 @@ class Product(models.Model):
 
 
 class ProductImage(models.Model):
-    product_id = models.OneToOneField(Product, on_delete=models.SET_NULL, null=True)
-    image_path = models.CharField(max_length=255, null=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images', null=True, blank=True)
+    image = models.ImageField(upload_to='product_images/', null=True, blank=True)
     is_main = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ['product_id']
+        ordering = ['product']
         db_table = 'product_image'
