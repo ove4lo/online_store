@@ -13,22 +13,25 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 # Получение всех брендов
-def get_all_brands(request):
-    brands = Brand.objects.all()
-    data = []
-
-    for brand in brands:
-        data.append({
-            "id": brand.id,
-            "name": brand.name,
-            "description": brand.description
-        })
-    return JsonResponse(data, safe=False)
+def get_all_brands(request) -> JsonResponse:
+    """Метод получения всех брендов"""
+    try:
+        brands = Brand.objects.all()
+        data = []
+        for brand in brands:
+            data.append({
+                "id": brand.id,
+                "name": brand.name,
+                "description": brand.description
+            })
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, safe=False)
 
 
 # Создание бренда
 @csrf_exempt
-def create_brand(request):
+def create_brand(request) -> JsonResponse:
     if request.method == "POST":
         try:
             brand = Brand.objects.create(
@@ -44,18 +47,31 @@ def create_brand(request):
 
 # Обновление бренда
 @csrf_exempt
-def update_brand(request, id):
-    pass
+def update_brand(request, id) -> JsonResponse:
+    try:
+        brand = Brand.objects.get(id=id)
+    except Brand.DoesNotExist:
+        return JsonResponse({'message': 'Brand does not exist'}, status=404)
+    if request.method == "PATCH":
+        try:
+            brand.name = request.POST["name"]
+            brand.description = request.POST["description"]
+            brand.save()
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+    else:
+        return JsonResponse({"error": 'only method PATCH'}, status=405)
+    return JsonResponse({"message": 'update successful'}, status=200)
 
 
 # удаление бренда
 @csrf_exempt
-def delete_brand(request, id):
+def delete_brand(request, id) -> JsonResponse:
     try:
         if request.method == "DELETE":
             brand = Brand.objects.get(id=id)
             brand.delete()
-            return JsonResponse({'message': 'brand removed'})
+            return JsonResponse({'message': 'brand removed'}, status=204)
     except Brand.DoesNotExist:
         return JsonResponse({"error": "brand is not found"}, status=404)
     except Exception as e:
