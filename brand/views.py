@@ -34,14 +34,15 @@ def get_all_brands(request) -> JsonResponse:
 def create_brand(request) -> JsonResponse:
     if request.method == "POST":
         try:
+            data = json.loads(request.body)
             brand = Brand.objects.create(
-                name=request.POST["name"],
-                description=request.POST["description"],
+                name=data["name"],
+                description=data["description"],
             )
             return JsonResponse({'message': 'сreation is successful'}, status=201)
 
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"ТУТ": str(e)}, status=500)
     return JsonResponse({"error": 'only method POST'}, status=405)
 
 
