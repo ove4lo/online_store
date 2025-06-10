@@ -43,3 +43,30 @@ def create_user(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод POST"}, status=405)
+
+# получения пользователя по id
+def get_user_by_id(request, user_id):
+    if request.method == "GET":
+        try:
+            # Получаем пользователя по id или возвращаем 404 если не найден
+            user = User.objects.get(id=user_id)
+
+            # Формируем ответ с данными пользователя
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "full_name": user.full_name,
+                "phone": user.phone,
+                "is_staff": user.is_staff,
+                "is_active": user.is_active,
+            }
+
+            return JsonResponse(user_data, status=200)
+
+        except User.DoesNotExist:
+            return JsonResponse({"error": "Пользователь не найден"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Только метод GET"}, status=405)

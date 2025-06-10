@@ -6,7 +6,10 @@ from category.models import category
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 
+
 # Получение товаров по поиску, можно не передавать ничего, выведет все товары
+
+# Надо протестить + обработка бренда
 @csrf_exempt
 def get_products(request):
     if request.method == "GET":
@@ -28,7 +31,42 @@ def get_products(request):
                     Q(glass_type__icontains=search) |
                     Q(dimensions__icontains=search)
                 )
+            # пу-пу-пу говнокодим, надо не забыть удалить
 
+            # brand = request.GET.get("brand")
+            country = request.GET.get("country")
+            movement_type = request.GET.get("movement_type")
+            case_material = request.GET.get("case_material")
+            glass_type = request.GET.get("glass_type")
+
+            # Динамический фильтр
+            filters = {}
+
+            # if brand is not None and brand != "":
+            #     filters["brand_id"] = brand
+            if country is not None and country != "":
+                filters["country"] = country
+            if movement_type not in (None, ""):
+                filters["movement_type"] = movement_type
+            if case_material not in (None, ""):
+                filters["case_material"] = case_material
+            if glass_type not in (None, ""):
+                filters["glass_type"] = glass_type
+
+            # Применяем фильтр только если есть параметры
+            if filters:
+                products = products.filter(**filters)
+
+            price_sort = request.GET.get('price_sort', 'asc')  # 'asc' или 'desc'
+            name_sort = request.GET.get('name_sort', 'asc')
+
+            order_by = []
+            order_by.append('price' if price_sort == 'asc' else '-price')
+            order_by.append('name' if name_sort == 'asc' else '-name')
+
+            products = products.order_by(*order_by)
+
+            # конец говнокода
             data = []
             for product in products:
                 images = product.images.all()
@@ -66,6 +104,7 @@ def get_products(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод GET"}, status=405)
+
 
 # Получение одного товара по его id
 @csrf_exempt
@@ -111,6 +150,7 @@ def get_product_by_id(request, product_id):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод GET"}, status=405)
+
 
 # Добавление нового товара
 @csrf_exempt
@@ -174,6 +214,7 @@ def create_product(request):
 
     return JsonResponse({"error": "Только метод POST"}, status=405)
 
+
 # Мягкое удаление товара, остается в бд, в каталоге нет
 @csrf_exempt
 def soft_delete_product(request, product_id):
@@ -189,6 +230,7 @@ def soft_delete_product(request, product_id):
             return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"error": "Только метод DELETE"}, status=405)
 
+
 # Жесткое удаление товара, удаляется из бд
 @csrf_exempt
 def hard_delete_product(request, product_id):
@@ -203,6 +245,7 @@ def hard_delete_product(request, product_id):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод DELETE"}, status=405)
+
 
 # Редактирование товара
 @csrf_exempt
