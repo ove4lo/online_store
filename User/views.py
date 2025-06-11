@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
+from django.db import transaction
 
 User = get_user_model()
 
@@ -36,7 +37,9 @@ def register_user(request):
             phone = body.get("phone")
 
             if not all([username, email, password, full_name, phone]):
-                return JsonResponse({"error": "Не заполнены обязательные поля: username, email, password, full_name, phone"}, status=400)
+                return JsonResponse(
+                    {"error": "Не заполнены обязательные поля: username, email, password, full_name, phone"},
+                    status=400)
 
             if "@" not in email or "." not in email:
                 return JsonResponse({"error": "Некорректный формат email"}, status=400)
@@ -44,29 +47,35 @@ def register_user(request):
             if len(password) < 8:
                 return JsonResponse({"error": "Пароль должен быть не менее 8 символов."}, status=400)
 
-            try:
-                user = User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=password,
-                    full_name=full_name,
-                    phone=phone
-                )
+            with transaction.atomic():
+                try:
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        full_name=full_name,
+                        phone=phone
+                    )
 
-                return JsonResponse({"message": "Пользователь успешно зарегистрирован.", "user": get_user_data(user)}, status=201)
+                    login(request, user)
 
-            except IntegrityError as e:
-                error_message = str(e).lower()
-                if 'unique constraint' in error_message:
-                    if 'username' in error_message:
-                        return JsonResponse({"error": "Пользователь с таким именем пользователя уже существует."}, status=409) # 409 Conflict
-                    elif 'email' in error_message:
-                        return JsonResponse({"error": "Пользователь с таким email уже существует."}, status=409)
-                return JsonResponse({"error": f"Ошибка базы данных при регистрации: {str(e)}"}, status=500)
-            except ValueError as e:
-                return JsonResponse({"error": str(e)}, status=400)
-            except Exception as e:
-                return JsonResponse({"error": f"Произошла непредвиденная ошибка при регистрации: {str(e)}"}, status=500)
+                    return JsonResponse({"message": "Пользователь успешно зарегистрирован и выполнен вход.",
+                                         "user": get_user_data(user)}, status=201)
+
+                except IntegrityError as e:
+                    error_message = str(e).lower()
+                    if 'unique constraint' in error_message:
+                        if 'username' in error_message:
+                            return JsonResponse({"error": "Пользователь с таким именем пользователя уже существует."},
+                                                status=409)
+                        elif 'email' in error_message:
+                            return JsonResponse({"error": "Пользователь с таким email уже существует."}, status=409)
+                    return JsonResponse({"error": f"Ошибка базы данных при регистрации: {str(e)}"}, status=500)
+                except ValueError as e:
+                    return JsonResponse({"error": str(e)}, status=400)
+                except Exception as e:
+                    return JsonResponse({"error": f"Произошла непредвиденная ошибка при регистрации: {str(e)}"},
+                                        status=500)
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "Некорректный JSON формат запроса."}, status=400)
