@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.db import transaction
-
+from cart.models import Cart
 User = get_user_model()
 
 # Формирование данных пользователя в JSON-ответе
