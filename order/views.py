@@ -1,134 +1,165 @@
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from .models import Order, OrderItem, Product
-from User.models import User
-from django.utils.timezone import localtime
-from django.utils.timezone import now, timedelta
+from django.db import transaction
+from django.utils.timezone import localtime, now, timedelta
 from django.db.models import Q
+from django.contrib.auth import get_user_model
+
+from .models import Order, OrderItem
+from product.models import Product
+
+User = get_user_model()
+
+# Формироване данных заказа -
+def get_order_data(order_obj):
+    user_data = {
+        "full_name": order_obj.user.full_name,
+        "phone": order_obj.user.phone,
+        "email": order_obj.user.email,
+        "address": order_obj.address,
+        "postal_code": order_obj.postal_code,
+    }
+
+    items_data = []
+    for item in order_obj.orderitem_set.all():
+        product = item.product_id
+        items_data.append({
+            "product_id": product.id,
+            "name": product.name,
+            "quantity": item.quantity,
+            "price": float(item.price_at_purchase)
+        })
+
+    return {
+        "order_id": order_obj.id,
+        "user": user_data,
+        "items": items_data,
+        "total_price": float(order_obj.total_price),
+        "created_at": localtime(order_obj.created_at).isoformat(),
+        "status": order_obj.status
+    }
 
 # Добавление нового заказа
 @csrf_exempt
 def create_order(request):
     if request.method == "POST":
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Для создания заказа необходимо авторизоваться."}, status=401)
+
+        current_user = request.user
+
         try:
             body = json.loads(request.body)
 
-            user_id = body.get("user_id")
             items = body.get("items")
             address = body.get("address")
             postal_code = body.get("postal_code")
 
-            # Проверка обязательных полей
-            if not user_id or not items or not address or not postal_code:
-                return JsonResponse({"error": "Необходимы user_id, items, address, city, postal_code"}, status=400)
-
-            # Проверка существования пользователя
-            user = User.objects.filter(id=user_id).first()
-            if not user:
-                return JsonResponse({"error": "Пользователь не найден"}, status=404)
+            if not items or not address or not postal_code:
+                return JsonResponse({"error": "Необходимы items, address, postal_code"}, status=400)
 
             total_price = 0
-            order_items = []
+            order_items_data = []
 
-            for item in items:
-                product_id = item.get("product_id")
-                quantity = item.get("quantity")
+            with transaction.atomic():
+                for item_data in items:
+                    product_id = item_data.get("product_id")
+                    quantity = item_data.get("quantity")
 
-                if not product_id or not quantity:
-                    return JsonResponse({"error": "Нет product_id и quantity"}, status=400)
+                    if not product_id or not quantity:
+                        return JsonResponse({"error": "В элементах заказа должны быть product_id и quantity"}, status=400)
+                    if not isinstance(quantity, int) or quantity <= 0:
+                        return JsonResponse({"error": "Количество товара должно быть положительным целым числом"}, status=400)
 
-                product = Product.objects.filter(id=product_id, is_deleted=False).first()
-                if not product:
-                    return JsonResponse({"error": f"Товар с id {product_id} не найден или удалён"}, status=404)
+                    product = Product.objects.filter(id=product_id, is_deleted=False).first()
+                    if not product:
+                        return JsonResponse({"error": f"Товар с id {product_id} не найден или удалён"}, status=404)
 
-                price = product.price * quantity
-                total_price += price
-                order_items.append({
-                    "product": product,
-                    "quantity": quantity,
-                    "price": product.price
-                })
+                    if hasattr(product, 'stock_quantity') and product.stock_quantity < quantity:
+                         return JsonResponse({"error": f"Недостаточно товара '{product.name}' на складе. Доступно: {product.stock_quantity}"}, status=400)
 
-            # Создание заказа
-            order = Order.objects.create(
-                user=user,
-                address=address,
-                postal_code=postal_code,
-                total_price=total_price,
-                status='В обработке'
-            )
+                    price = product.price * quantity
+                    total_price += price
+                    order_items_data.append({
+                        "product": product,
+                        "quantity": quantity,
+                        "price": product.price
+                    })
 
-            # Создание элементов заказа
-            for item in order_items:
-                OrderItem.objects.create(
-                    order_id=order,
-                    product_id=item["product"],
-                    quantity=item["quantity"],
-                    price_at_purchase=item["price"]
+                # Создание заказа
+                order = Order.objects.create(
+                    user=current_user,
+                    address=address,
+                    postal_code=postal_code,
+                    total_price=total_price,
+                    status='В обработке'
                 )
+
+                # Создание элементов заказа
+                for item in order_items_data:
+                    OrderItem.objects.create(
+                        order=order,
+                        product_id=item["product"],
+                        quantity=item["quantity"],
+                        price_at_purchase=item["price"]
+                    )
 
             return JsonResponse({"message": "Заказ успешно создан", "order_id": order.id}, status=201)
 
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Некорректный JSON формат запроса"}, status=400)
+        except ValueError as e:
+            return JsonResponse({"error": str(e)}, status=400)
+        except Product.DoesNotExist:
+            return JsonResponse({"error": "Один или несколько продуктов не найдены."}, status=404)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"error": f"Произошла ошибка: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Только метод POST"}, status=405)
+
 
 # Просмотр деталей заказа по его id
 @csrf_exempt
 def get_order_by_id(request, order_id):
     if request.method == "GET":
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Для просмотра деталей заказа необходимо авторизоваться."}, status=401)
+
         try:
             order = Order.objects.select_related('user').prefetch_related('orderitem_set__product_id').get(id=order_id)
 
-            # Данные пользователя
-            user = order.user
-            user_data = {
-                "full_name": user.full_name,
-                "phone": user.phone,
-                "email": user.email,
-                "address": order.address
-            }
+            if not request.user.is_staff and order.user != request.user:
+                return JsonResponse({"error": "У вас нет прав для просмотра этого заказа."}, status=403) # 403 Forbidden
 
-            # Товары в заказе
-            items_data = []
-            for item in order.orderitem_set.all():
-                product = item.product_id
-                items_data.append({
-                    "name": product.name,
-                    "quantity": item.quantity,
-                    "price": float(item.price_at_purchase)
-                })
-
-            data = {
-                "user": user_data,
-                "items": items_data,
-                "total_price": float(order.total_price),
-                "created_at": localtime(order.created_at).strftime("%Y-%m-%d %H:%M:%S"),
-                "status": order.status
-            }
-
+            data = get_order_data(order)
             return JsonResponse(data, safe=False)
 
         except Order.DoesNotExist:
             return JsonResponse({"error": "Заказ не найден"}, status=404)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"error": f"Произошла ошибка: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Только метод GET"}, status=405)
 
-# Получение всех заказов с сортировкой, фильтрацией, поиском
+
+# Получение всех заказов с сортировкой, фильтрацией, поиском (только для админа)
 @csrf_exempt
 def get_all_orders(request):
     if request.method == "GET":
+        # 1. Проверка авторизации и прав менеджера (is_staff):
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Необходимо авторизоваться."}, status=401)
+        if not request.user.is_staff:
+            return JsonResponse({"error": "У вас нет прав для просмотра всех заказов."}, status=403)
+
         try:
             status_filter = request.GET.get("status")
             period_filter = request.GET.get("period")
-            search = request.GET.get("search", "").strip().lower()
+            search = request.GET.get("search", "").strip()
 
-            sort_by = request.GET.get("sort_by", "date")  # date, status, price, user
-            order = request.GET.get("order", "desc")
+            sort_by = request.GET.get("sort_by", "date")
+            order_dir = request.GET.get("order", "desc")
 
             orders = Order.objects.select_related("user").all()
 
@@ -147,10 +178,13 @@ def get_all_orders(request):
                     orders = orders.filter(created_at__date__gte=month_ago)
 
             if search:
-                if search.isdigit():
+                if search.isdigit(): # Если строка поиска - это число, ищем по ID заказа
                     orders = orders.filter(id=int(search))
-                else:
-                    orders = orders.filter(user__email__icontains=search)
+                else: # Иначе ищем по email пользователя или полному имени
+                    orders = orders.filter(
+                        Q(user__email__icontains=search) |
+                        Q(user__full_name__icontains=search)
+                    )
 
             sort_fields = {
                 "date": "created_at",
@@ -159,34 +193,40 @@ def get_all_orders(request):
                 "user": "user__email"
             }
 
-            sort_field = sort_fields.get(sort_by, "created_at")
-            if order == "desc":
-                sort_field = "-" + sort_field
+            sort_field_name = sort_fields.get(sort_by, "created_at")
+            if order_dir == "desc":
+                sort_field_name = "-" + sort_field_name
 
-            orders = orders.order_by(sort_field)
+            orders = orders.order_by(sort_field_name)
 
             result = []
-            for order in orders:
-                user = order.user.full_name or order.user.email
+            for order_obj in orders:
                 result.append({
-                    "order_id": order.id,
-                    "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    "user": user,
-                    "total_price": float(order.total_price),
-                    "status": order.status
+                    "order_id": order_obj.id,
+                    "created_at": localtime(order_obj.created_at).isoformat(),
+                    "user_username": order_obj.user.username,
+                    "user_full_name": order_obj.user.full_name,
+                    "total_price": float(order_obj.total_price),
+                    "status": order_obj.status
                 })
 
             return JsonResponse(result, safe=False)
 
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"error": f"Произошла ошибка: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Только метод GET"}, status=405)
 
-# Изменение у заказа его статус
+
+# Изменение статуса заказа (только для админа)
 @csrf_exempt
 def update_order_status(request, order_id):
     if request.method == "PATCH":
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Необходимо авторизоваться."}, status=401)
+        if not request.user.is_staff:
+            return JsonResponse({"error": "У вас нет прав для изменения статуса заказа."}, status=403)
+
         try:
             body = json.loads(request.body)
             new_status = body.get("status")
@@ -202,34 +242,41 @@ def update_order_status(request, order_id):
             order.status = new_status
             order.save()
 
-            return JsonResponse({"message": "Статус обновлен", "order_id": order.id, "new_status": order.status})
+            return JsonResponse({"message": "Статус заказа успешно обновлен.", "order": get_order_data(order)}, status=200)
 
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Некорректный JSON формат запроса."}, status=400)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"error": f"Произошла ошибка: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Только метод PATCH"}, status=405)
 
-# Получение всех заказов пользователя
+
+# Получение всех заказов пользователя (конкретного user_id)
 @csrf_exempt
-def get_user_orders(request, user_id):
+def get_user_specific_orders(request, user_id):
     if request.method == "GET":
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Необходимо авторизоваться для просмотра заказов."}, status=401)
+
+        # Либо текущий пользователь - админ, либо он запрашивает свои собственные заказы
+        if not request.user.is_staff and request.user.id != user_id:
+            return JsonResponse({"error": "У вас нет прав для просмотра заказов другого пользователя."}, status=403)
+
         try:
-            orders = Order.objects.select_related("user").filter(user_id=user_id)
+            target_user = User.objects.filter(id=user_id).first()
+            if not target_user:
+                return JsonResponse({"error": "Пользователь не найден."}, status=404)
+
+            orders = Order.objects.select_related("user").filter(user=target_user).order_by('-created_at')
 
             result = []
-            for order in orders:
-                user = order.user.full_name or order.user.email
-                result.append({
-                    "order_id": order.id,
-                    "created_at": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    "user": user,
-                    "total_price": float(order.total_price),
-                    "status": order.status
-                })
+            for order_obj in orders:
+                result.append(get_order_data(order_obj))
 
             return JsonResponse(result, safe=False)
 
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"error": f"Произошла ошибка: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Только метод GET"}, status=405)
