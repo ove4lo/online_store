@@ -383,3 +383,26 @@ def edit_product(request, product_id):
             return JsonResponse({"error": f"Произошла ошибка при редактировании продукта: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Только метод PATCH"}, status=405)
+
+
+@csrf_exempt
+def get_all_parameters(request):
+    if request.method == "GET":
+        try:
+            countries = Product.objects.exclude(country__isnull=True).exclude(country__exact='').order_by('country').values_list('country', flat=True).distinct()
+            movement_types = Product.objects.exclude(movement_type__isnull=True).exclude(movement_type__exact='').order_by('movement_type').values_list('movement_type', flat=True).distinct()
+            case_materials = Product.objects.exclude(case_material__isnull=True).exclude(case_material__exact='').order_by('case_material').values_list('case_material', flat=True).distinct()
+            glass_types = Product.objects.exclude(glass_type__isnull=True).exclude(glass_type__exact='').order_by('glass_type').values_list('glass_type', flat=True).distinct()
+            data = {
+                "countries": list(countries),
+                "movement_types": list(movement_types),
+                "case_materials": list(case_materials),
+                "glass_types": list(glass_types),
+            }
+
+            return JsonResponse(data, safe=False)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Только метод GET"}, status=405)
