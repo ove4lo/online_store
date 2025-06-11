@@ -13,6 +13,9 @@ User = get_user_model()
 
 # Формироване данных заказа -
 def get_order_data(order_obj):
+    """
+    Формирует словарь с основными данными заказа для JSON-ответа.
+    """
     user_data = {
         "full_name": order_obj.user.full_name,
         "phone": order_obj.user.phone,
@@ -22,8 +25,8 @@ def get_order_data(order_obj):
     }
 
     items_data = []
-    for item in order_obj.orderitem_set.all():
-        product = item.product_id
+    for item in order_obj.items.all():
+        product = item.product
         items_data.append({
             "product_id": product.id,
             "name": product.name,
@@ -100,7 +103,7 @@ def create_order(request):
                 for item in order_items_data:
                     OrderItem.objects.create(
                         order=order,
-                        product_id=item["product"],
+                        product=item["product"],
                         quantity=item["quantity"],
                         price_at_purchase=item["price"]
                     )
@@ -127,10 +130,10 @@ def get_order_by_id(request, order_id):
             return JsonResponse({"error": "Для просмотра деталей заказа необходимо авторизоваться."}, status=401)
 
         try:
-            order = Order.objects.select_related('user').prefetch_related('orderitem_set__product_id').get(id=order_id)
+            order = Order.objects.select_related('user').prefetch_related('items__product').get(id=order_id)
 
             if not request.user.is_staff and order.user != request.user:
-                return JsonResponse({"error": "У вас нет прав для просмотра этого заказа."}, status=403) # 403 Forbidden
+                return JsonResponse({"error": "У вас нет прав для просмотра этого заказа."}, status=403)
 
             data = get_order_data(order)
             return JsonResponse(data, safe=False)
@@ -141,7 +144,6 @@ def get_order_by_id(request, order_id):
             return JsonResponse({"error": f"Произошла ошибка: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Только метод GET"}, status=405)
-
 
 # Получение всех заказов с сортировкой, фильтрацией, поиском (только для админа)
 @csrf_exempt
@@ -259,7 +261,6 @@ def get_user_specific_orders(request, user_id):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "Необходимо авторизоваться для просмотра заказов."}, status=401)
 
-        # Либо текущий пользователь - админ, либо он запрашивает свои собственные заказы
         if not request.user.is_staff and request.user.id != user_id:
             return JsonResponse({"error": "У вас нет прав для просмотра заказов другого пользователя."}, status=403)
 
@@ -268,7 +269,8 @@ def get_user_specific_orders(request, user_id):
             if not target_user:
                 return JsonResponse({"error": "Пользователь не найден."}, status=404)
 
-            orders = Order.objects.select_related("user").filter(user=target_user).order_by('-created_at')
+            # prefetch_related для оптимизации
+            orders = Order.objects.select_related("user").prefetch_related('items__product').filter(user=target_user).order_by('-created_at')
 
             result = []
             for order_obj in orders:
