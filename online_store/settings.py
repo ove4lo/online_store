@@ -41,12 +41,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'User',
     'brand.apps.BrandConfig',
     'cart.apps.CartConfig',
     'category.apps.CategoryConfig',
     'order.apps.OrderConfig',
     'product.apps.ProductConfig',
-    'User.apps.UserConfig',
     'wishlist.apps.WishlistConfig',
 ]
 
@@ -79,7 +79,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'online_store.wsgi.application'
-
+AUTH_USER_MODEL = 'User.User'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
