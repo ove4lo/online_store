@@ -14,7 +14,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 # Получение всех брендов
 def get_all_brands(request) -> JsonResponse:
-    """Метод получения всех брендов"""
     try:
         brands = Brand.objects.all()
         data = []
@@ -44,7 +43,6 @@ def create_brand(request) -> JsonResponse:
         except Exception as e:
             return JsonResponse({"ТУТ": str(e)}, status=500)
     return JsonResponse({"error": 'only method POST'}, status=405)
-
 
 # Обновление бренда
 @csrf_exempt
