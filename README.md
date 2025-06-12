@@ -107,11 +107,13 @@
 6.  #### Регистрация пользователя POST ``` /user/register/ ```
 ``` json
 {
-    "username": "test2",
-    "email": "test2@example.com",
-    "password": "123123123",
-    "full_name": "Test2",
-    "phone": "89241263773"
+    "username": "test",
+    "email": "test@example.com",
+    "password": "SecurePassword123!",
+    "full_name": "Новый Клиент",
+    "phone": "1112223333",
+    "address": "Улица Заказов, д. 15, кв. 20", 
+    "postal_code": "456789"                  
 }
 ```
 Пример полученного результата:
@@ -119,15 +121,17 @@
 {
     "message": "Пользователь успешно зарегистрирован и выполнен вход.",
     "user": {
-        "id": 5,
-        "username": "test2",
-        "email": "test2@example.com",
-        "full_name": "Test2",
-        "phone": "89241263773",
+        "id": 2,
+        "username": "test",
+        "email": "test@example.com",
+        "full_name": "Новый Клиент",
+        "phone": "1112223333",
+        "address": "Улица Заказов, д. 15, кв. 20",
+        "postal_code": "456789",
         "is_staff": false,
         "is_active": true,
-        "created_at": "2025-06-12T01:12:00.348150+00:00",
-        "updated_at": "2025-06-12T01:12:00.348150+00:00"
+        "created_at": "2025-06-12T03:01:23.938851+00:00",
+        "updated_at": "2025-06-12T03:01:23.938885+00:00"
     }
 }
 ```
@@ -214,5 +218,53 @@
     "is_active": true,
     "created_at": "2025-06-11T06:13:43.294011+00:00",
     "updated_at": "2025-06-11T06:13:43.294011+00:00"
+}
+```
+11.  #### Изменение у пользователя адрес доставки PATCH ``` user/address/ ```
+``` json
+{
+    "address": "Тестовый адрес пользователя",
+    "postal_code": "12345"
+}
+```
+Пример полученного результата:
+``` json
+{
+    "message": "Адрес пользователя успешно обновлен.",
+    "user": {
+        "id": 2,
+        "username": "test",
+        "email": "test@example.com",
+        "full_name": "Новый Клиент",
+        "phone": "1112223333",
+        "address": "Тестовый адрес пользователя",
+        "postal_code": "12345",
+        "is_staff": false,
+        "is_active": true,
+        "created_at": "2025-06-12T03:01:23.938851+00:00",
+        "updated_at": "2025-06-12T03:18:41.481137+00:00"
+    }
+}
+```
+12.  #### Создание заказа у текущего пользователя POST ``` orders/create/ ```
+``` json
+{
+    "items": [
+        {
+            "product_id": 1,
+            "quantity": 1
+        },
+        {
+            "product_id": 2,
+            "quantity": 3
+        }
+    ]
+}
+```
+Пример полученного результата:
+``` json
+{
+    "message": "Заказ успешно создан",
+    "order_id": 1
 }
 ```
