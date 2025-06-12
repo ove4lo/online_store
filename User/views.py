@@ -17,6 +17,8 @@ def get_user_data(user):
         "email": user.email,
         "full_name": user.full_name,
         "phone": user.phone,
+        "address": user.address if user.address else None,
+        "postal_code": user.postal_code if user.postal_code else None,
         "is_staff": user.is_staff,
         "is_active": user.is_active,
         "created_at": user.created_at.isoformat() if user.created_at else None,
@@ -35,6 +37,8 @@ def register_user(request):
             password = body.get("password")
             full_name = body.get("full_name")
             phone = body.get("phone")
+            address = body.get("address", "")  # Опционально
+            postal_code = body.get("postal_code", "")  # Опционально
 
             if not all([username, email, password, full_name, phone]):
                 return JsonResponse(
@@ -54,7 +58,9 @@ def register_user(request):
                         email=email,
                         password=password,
                         full_name=full_name,
-                        phone=phone
+                        phone=phone,
+                        address = address,
+                        postal_code = postal_code
                     )
 
                     login(request, user)
@@ -145,3 +151,30 @@ def get_user_by_id(request, user_id):
             return JsonResponse({"error": f"Произошла ошибка при получении пользователя по ID: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Только метод GET разрешен для получения пользователя по ID."}, status=405)
+
+# Изменение адреса у пользователя
+@csrf_exempt
+def update_user_address(request):
+    if request.method == "PATCH":
+        if not request.user.is_authenticated:
+            return JsonResponse({"error": "Необходимо авторизоваться для обновления адреса."}, status=401)
+
+        current_user = request.user
+        try:
+            body = json.loads(request.body)
+            new_address = body.get("address")
+            new_postal_code = body.get("postal_code")
+
+            if new_address is not None:
+                current_user.address = new_address
+            if new_postal_code is not None:
+                current_user.postal_code = new_postal_code
+
+            current_user.save()
+            return JsonResponse({"message": "Адрес пользователя успешно обновлен.", "user": get_user_data(current_user)}, status=200)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Некорректный JSON формат запроса."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": f"Произошла ошибка при обновлении адреса: {str(e)}"}, status=500)
+    return JsonResponse({"error": "Только метод PATCH"}, status=405)

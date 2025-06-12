@@ -13,15 +13,12 @@ User = get_user_model()
 
 # Формироване данных заказа -
 def get_order_data(order_obj):
-    """
-    Формирует словарь с основными данными заказа для JSON-ответа.
-    """
     user_data = {
         "full_name": order_obj.user.full_name,
         "phone": order_obj.user.phone,
         "email": order_obj.user.email,
-        "address": order_obj.address,
-        "postal_code": order_obj.postal_code,
+        "address": order_obj.user.address if order_obj.user.address else None,
+        "postal_code": order_obj.user.postal_code if order_obj.user.postal_code else None,
     }
 
     items_data = []
@@ -56,11 +53,14 @@ def create_order(request):
             body = json.loads(request.body)
 
             items = body.get("items")
-            address = body.get("address")
-            postal_code = body.get("postal_code")
 
-            if not items or not address or not postal_code:
-                return JsonResponse({"error": "Необходимы items, address, postal_code"}, status=400)
+            if not items:
+                return JsonResponse({"error": "Необходимы items"}, status=400)
+
+            if not current_user.address or not current_user.postal_code:
+                return JsonResponse({
+                    "error": "Пожалуйста, укажите адрес и почтовый индекс в профиле пользователя перед созданием заказа."},
+                    status=400)
 
             total_price = 0
             order_items_data = []
@@ -93,8 +93,6 @@ def create_order(request):
                 # Создание заказа
                 order = Order.objects.create(
                     user=current_user,
-                    address=address,
-                    postal_code=postal_code,
                     total_price=total_price,
                     status='В обработке'
                 )

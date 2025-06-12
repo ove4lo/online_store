@@ -28,13 +28,16 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(username, email, password, **extra_fields)
 
-
-class User(AbstractBaseUser, PermissionsMixin): # Наследуемся от AbstractBaseUser и PermissionsMixin
+class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=50, unique=True, null=False)
     email = models.EmailField(unique=True, null=False)
     password_hash = models.CharField(max_length=128)
     full_name = models.CharField(max_length=200, null=False)
     phone = models.CharField(max_length=20, null=False)
+
+    address = models.CharField(max_length=255, blank=True, null=True)
+    postal_code = models.CharField(max_length=20, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_staff = models.BooleanField(default=False)
@@ -60,6 +63,7 @@ class User(AbstractBaseUser, PermissionsMixin): # Наследуемся от Ab
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email', 'full_name', 'phone']
+
 
     def __str__(self):
         return self.username
