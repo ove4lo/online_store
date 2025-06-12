@@ -64,11 +64,9 @@ def add_to_cart(request):
 
 # удаление товара из корзины
 @csrf_exempt
-def remove_from_cart(request):
+def remove_from_cart(request, product_id):
     try:
         if request.method == "DELETE":
-            data = json.loads(request.body)
-            product_id = data.get('product_id')
             # Получаем корзину пользователя
 
             cart = get_object_or_404(Cart, user=request.user)
@@ -101,13 +99,15 @@ def update_cart_item_quantity(request):
 
         data = json.loads(request.body)
         product_id = data.get('product_id')
+        action = data.get('action')
 
         # Получаем корзину и товар
         cart = get_object_or_404(Cart, user=request.user)
         cart_item = get_object_or_404(CartItem, cart=cart, product_id=product_id)
-
-        # Увеличиваем количество на 1
-        cart_item.quantity += 1
+        if action == '+':
+            cart_item.quantity += 1
+        elif action == '-':
+            cart_item.quantity -= 1
         cart_item.save()
 
         return JsonResponse({
