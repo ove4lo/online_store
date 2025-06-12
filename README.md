@@ -116,22 +116,32 @@
     "postal_code": "456789"                  
 }
 ```
+Поля address, postal_code необязательны
+``` json
+{
+    "username": "test2",
+    "email": "test2@example.com",
+    "password": "123123123",
+    "full_name": "Test2",
+    "phone": "111222333355"          
+}           
+```
 Пример полученного результата:
 ``` json
 {
     "message": "Пользователь успешно зарегистрирован и выполнен вход.",
     "user": {
-        "id": 2,
-        "username": "test",
-        "email": "test@example.com",
-        "full_name": "Новый Клиент",
-        "phone": "1112223333",
-        "address": "Улица Заказов, д. 15, кв. 20",
-        "postal_code": "456789",
+        "id": 4,
+        "username": "test2",
+        "email": "test2@example.com",
+        "full_name": "Test2",
+        "phone": "111222333355",
+        "address": null,
+        "postal_code": null,
         "is_staff": false,
         "is_active": true,
-        "created_at": "2025-06-12T03:01:23.938851+00:00",
-        "updated_at": "2025-06-12T03:01:23.938885+00:00"
+        "created_at": "2025-06-12T03:22:44.340296+00:00",
+        "updated_at": "2025-06-12T03:22:44.340323+00:00"
     }
 }
 ```
@@ -139,8 +149,8 @@
 7.  #### Авторизация пользователя POST ```/user/login/ ```
 ``` json
 {
-    "username": "admin",
-    "password": "admin"
+    "username": "test",
+    "password": "SecurePassword123!"
 }
 ```
 Пример полученного результата:
@@ -148,15 +158,17 @@
 {
     "message": "Вход успешно выполнен.",
     "user": {
-        "id": 1,
-        "username": "admin",
-        "email": "admin@gmail.com",
-        "full_name": "admin",
-        "phone": "70000000000",
-        "is_staff": true,
+        "id": 2,
+        "username": "test",
+        "email": "test@example.com",
+        "full_name": "Новый Клиент",
+        "phone": "1112223333",
+        "address": "Тестовый адрес пользователя",
+        "postal_code": "12345",
+        "is_staff": false,
         "is_active": true,
-        "created_at": "2025-06-11T05:58:21.687118+00:00",
-        "updated_at": "2025-06-11T05:58:21.687118+00:00"
+        "created_at": "2025-06-12T03:01:23.938851+00:00",
+        "updated_at": "2025-06-12T03:18:41.481137+00:00"
     }
 }
 ```
@@ -187,15 +199,17 @@
 ``` json
 {
     "user": {
-        "id": 1,
-        "username": "admin",
-        "email": "admin@gmail.com",
-        "full_name": "admin",
-        "phone": "70000000000",
-        "is_staff": true,
+        "id": 2,
+        "username": "test",
+        "email": "test@example.com",
+        "full_name": "Новый Клиент",
+        "phone": "1112223333",
+        "address": "Тестовый адрес пользователя",
+        "postal_code": "12345",
+        "is_staff": false,
         "is_active": true,
-        "created_at": "2025-06-11T05:58:21.687118+00:00",
-        "updated_at": "2025-06-11T05:58:21.687118+00:00"
+        "created_at": "2025-06-12T03:01:23.938851+00:00",
+        "updated_at": "2025-06-12T03:18:41.481137+00:00"
     }
 }
 ```
