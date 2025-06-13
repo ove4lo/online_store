@@ -57,7 +57,7 @@ def create_order(request):
             if not items:
                 return JsonResponse({"error": "Необходимы items"}, status=400)
 
-            if not current_user.address or not current_user.postal_code:
+            if not current_user.address:
                 return JsonResponse({
                     "error": "Пожалуйста, укажите адрес и почтовый индекс в профиле пользователя перед созданием заказа."},
                     status=400)
