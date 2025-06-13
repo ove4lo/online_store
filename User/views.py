@@ -64,7 +64,7 @@ def register_user(request):
                         address=address,
                         postal_code=postal_code
                     )
-
+                    cart = Cart.objects.create(user=user)
                     login(request, user)
 
                     return JsonResponse({"message": "Пользователь успешно зарегистрирован и выполнен вход.",
