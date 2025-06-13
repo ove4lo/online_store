@@ -143,20 +143,11 @@ def get_cart(request):
             try:
                 product = Product.objects.get(id=item.product_id, is_deleted=False)
                 data.append({
-                    'product_id': item.product_id,
+                    'id': item.product_id,
                     'quantity': item.quantity,
                     'brand_id': product.brand.name,
                     'name': product.name,
-                    'price': product.price,
-                    'description': product.description,
-                    'movement_type': product.movement_type,
-                    'caliber': product.caliber,
-                    'case_material': product.case_material,
-                    'dial_type': product.dial_type,
-                    'bracelet_material': product.bracelet_material,
-                    'water_resistance': product.water_resistance,
-                    'glass_type': product.glass_type,
-                    'dimensions': product.dimensions,
+                    'price': product.price
                 })
             except Product.DoesNotExist:
                 continue
