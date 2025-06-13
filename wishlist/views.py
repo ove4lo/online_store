@@ -24,21 +24,9 @@ def get_wishlist(request):
     try:
         wishlist_items = Wishlist.objects.filter(user=request.user)
         wishlist_data = [{
-            'product_id': item.product.id,
-            'product_name': item.product.name,
-            'brand': item.product.brand.name,
-            'category': item.product.category.name,
-            'price': item.product.price,
-            'description': item.product.description,
-            'country': item.product.country,
-            'movement_type': item.product.movement_type,
-            'caliber': item.product.caliber,
-            'case_material': item.product.case_material,
-            'dial_type': item.product.dial_type,
-            'bracelet_material': item.product.bracelet_material,
-            'water_resistance': item.product.water_resistance,
-            'glass_type': item.product.glass_type,
-            'dimensions': item.product.dimensions,
+            'id': item.product.id,
+            'name': item.product.name,
+            'price': item.product.price
 
         } for item in wishlist_items]
 

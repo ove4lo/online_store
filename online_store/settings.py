@@ -139,5 +139,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000", # URL админ-панели
     "http://127.0.0.1:3000",
+    "http://localhost:4200",
  ]
 CORS_ALLOW_CREDENTIALS = True # Обязательно True для отправки куки (sessionid)
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE  = True
