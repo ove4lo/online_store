@@ -5,9 +5,12 @@ from django.db import transaction
 from django.utils.timezone import localtime, now, timedelta
 from django.db.models import Q
 from django.contrib.auth import get_user_model
-
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
 from .models import Order, OrderItem
 from product.models import Product
+from django.db.models.functions import TruncDate
+from django.db.models import Count, Case, When, IntegerField
 
 User = get_user_model()
 
@@ -278,5 +281,36 @@ def get_user_specific_orders(request, user_id):
 
         except Exception as e:
             return JsonResponse({"error": f"Произошла ошибка: {str(e)}"}, status=500)
+
+    return JsonResponse({"error": "Только метод GET"}, status=405)
+
+@csrf_exempt
+def get_order_stats(request):
+    if request.method == "GET":
+        if not request.user.is_authenticated or not request.user.is_staff:
+            return JsonResponse({"error": "Недостаточно прав"}, status=403)
+
+        try:
+            # Статистика по статусам
+            status_stats = Order.objects.values('status').annotate(
+                count=Count('id'),
+                total=Count('id', distinct=True)  # Убрана лишняя запятая
+            )
+
+            # Статистика по дням
+            daily_stats = Order.objects.annotate(
+                date=TruncDate('created_at')
+            ).values('date').annotate(
+                count=Count('id'),
+                total_sum=Sum('total_price')
+            ).order_by('-date')[:30]
+
+            return JsonResponse({
+                "status_stats": list(status_stats),
+                "daily_stats": list(daily_stats)
+            })
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Только метод GET"}, status=405)

@@ -15,8 +15,7 @@ def get_categories(request):
             data = [
                 {
                     "id": cat.id,
-                    "name": cat.name,
-                    "description": cat.description if cat.description else ""
+                    "name": cat.name
                 }
                 for cat in categories
             ]
@@ -39,7 +38,6 @@ def create_category(request):
         try:
             body = json.loads(request.body)
             name = body.get("name")
-            description = body.get("description", "")
 
             if not name:
                 return JsonResponse({"error": "Название категории обязательно."}, status=400)
@@ -47,7 +45,7 @@ def create_category(request):
             if category.objects.filter(name__iexact=name).exists():  # Проверка на уникальность
                 return JsonResponse({"error": "Категория с таким названием уже существует."}, status=409)
 
-            new_category = category.objects.create(name=name, description=description)
+            new_category = category.objects.create(name=name)
             return JsonResponse(
                 {"message": "Категория успешно создана.", "id": new_category.id, "name": new_category.name}, status=201)
 
@@ -72,15 +70,11 @@ def update_category(request, category_id):
             body = json.loads(request.body)
 
             name = body.get("name")
-            description = body.get("description")
 
             if name:
                 if category.objects.filter(name__iexact=name).exclude(id=category_id).exists():
                     return JsonResponse({"error": "Категория с таким названием уже существует."}, status=409)
                 cat_obj.name = name
-
-            if description is not None:
-                cat_obj.description = description
 
             cat_obj.save()
             return JsonResponse({"message": "Категория успешно обновлена.", "id": cat_obj.id, "name": cat_obj.name},
