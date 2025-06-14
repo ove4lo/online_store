@@ -9,6 +9,9 @@ from .models import Wishlist
 
 
 def get_wishlist(request):
+    """
+    метод получения избранного
+    """
     if not request.user.is_authenticated:
         return JsonResponse({
             'status': 'error',
@@ -40,6 +43,7 @@ def get_wishlist(request):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
 
 @csrf_exempt
 def remove_from_wishlist(request, product_id):
@@ -79,6 +83,7 @@ def remove_from_wishlist(request, product_id):
             'status': 'error',
             'message': 'Не удалось удалить продукт из избранного'
         }, status=500)
+
 
 @csrf_exempt
 def add_to_wishlist(request):
@@ -137,5 +142,43 @@ def add_to_wishlist(request):
     except Exception as e:
         return JsonResponse({
             'status': 'error',
-            'message': 'Не удалось добавить продукт в избранное'
+            'message': 'Не удалось добавить продукт в избранное: '+str(e)
+        }, status=500)
+
+
+@csrf_exempt
+def clear_wishlist(request):
+    """
+    Полная очистка избранного пользователя
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Требуется авторизация'
+        }, status=401)
+
+    if request.method != 'DELETE':
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Метод не разрешен'
+        }, status=405)
+
+    try:
+        deleted_count, _ = Wishlist.objects.filter(user=request.user).delete()
+
+        if deleted_count == 0:
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Избранное уже пустое'
+            }, status=200)
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Избранное очищено, удалено {deleted_count} товаров'
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Не удалось очистить избранное'
         }, status=500)

@@ -159,3 +159,30 @@ def get_cart(request):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+@csrf_exempt
+def clear_cart(request):
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Требуется авторизация'
+            }, status=401)
+        if request.method == "DELETE":
+            cart = get_object_or_404(Cart, user=request.user)
+
+            CartItem.objects.filter(cart=cart).delete()
+
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Корзина полностью очищена'
+            })
+        else:
+            return JsonResponse({'Only method DELETE'}, status=401)
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
